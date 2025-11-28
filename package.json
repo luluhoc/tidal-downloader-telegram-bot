@@ -1,0 +1,32 @@
+{
+  "name": "tidal-media-downloader-bot",
+  "version": "1.0.0",
+  "description": "Tidal Media Downloader Telegram Bot",
+  "main": "dist/bot.js",
+  "scripts": {
+    "start": "ts-node src/bot.ts",
+    "build": "tsc",
+    "prod": "node dist/bot.js"
+  },
+  "keywords": [],
+  "author": "Lucjan Grzesik",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.3.1",
+    "fast-xml-parser": "^5.3.2",
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "music-metadata": "^7.13.4",
+    "node-id3": "^0.2.6",
+    "telegraf": "^4.15.0"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.1",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/node": "^20.8.10",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
