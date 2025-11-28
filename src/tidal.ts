@@ -119,6 +119,16 @@ export class TidalAPI {
         return response.data;
     }
 
+    public async getAlbumTracks(id: number): Promise<Track[]> {
+        const response = await this.api.get(`albums/${id}/tracks`, {
+            params: { 
+                countryCode: settingsManager.token.countryCode || 'US',
+                limit: 100
+            }
+        });
+        return response.data.items;
+    }
+
     public async getStreamUrl(id: number): Promise<StreamUrl> {
         const response = await this.api.get(`tracks/${id}/playbackinfopostpaywall`, {
             params: {

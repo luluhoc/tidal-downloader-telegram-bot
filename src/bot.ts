@@ -96,6 +96,49 @@ bot.action(/dl_(\d+)/, async (ctx) => {
     }
 });
 
+bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\/(\d+)/, async (ctx) => {
+    const type = ctx.match[1];
+    const id = parseInt(ctx.match[2]);
+
+    if (type === 'track') {
+        try {
+            ctx.reply('Fetching track info...');
+            const track = await tidalAPI.getTrack(id);
+            const album = await tidalAPI.getAlbum(track.album.id);
+            
+            ctx.reply(`Downloading ${track.title}...`);
+            const filePath = await downloadTrack(track, album);
+            
+            await ctx.replyWithDocument({ source: filePath });
+        } catch (e) {
+            console.error(e);
+            ctx.reply('Download failed.');
+        }
+    } else if (type === 'album') {
+        try {
+            ctx.reply('Fetching album info...');
+            const album = await tidalAPI.getAlbum(id);
+            const tracks = await tidalAPI.getAlbumTracks(id);
+            
+            ctx.reply(`Downloading album ${album.title} (${tracks.length} tracks)...`);
+            
+            for (const track of tracks) {
+                try {
+                    const filePath = await downloadTrack(track, album);
+                    await ctx.replyWithDocument({ source: filePath });
+                } catch (err) {
+                    console.error(`Failed to download track ${track.title}`, err);
+                    ctx.reply(`Failed to download ${track.title}`);
+                }
+            }
+            ctx.reply('Album download complete.');
+        } catch (e) {
+            console.error(e);
+            ctx.reply('Album download failed.');
+        }
+    }
+});
+
 bot.launch();
 
 console.log('Bot started');
