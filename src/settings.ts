@@ -32,7 +32,7 @@ export class SettingsManager {
 
     constructor() {
         this.settings = {
-            audioQuality: AudioQuality.High,
+            audioQuality: AudioQuality.Master,
             downloadPath: './downloads',
             saveCovers: true,
         };

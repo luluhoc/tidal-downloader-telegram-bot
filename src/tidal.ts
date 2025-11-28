@@ -88,6 +88,11 @@ export class TidalAPI {
         return false;
     }
 
+    public getCoverUrl(coverId: string): string {
+        const parts = coverId.split('-');
+        return `https://resources.tidal.com/images/${parts.join('/')}/1280x1280.jpg`;
+    }
+
     public async search(query: string, type: 'TRACKS' | 'ALBUMS' | 'ARTISTS' | 'PLAYLISTS', limit: number = 10) {
         const response = await this.api.get('search', {
             params: {
