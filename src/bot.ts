@@ -55,6 +55,15 @@ bot.command('login', async (ctx) => {
     }
 });
 
+const handleError = (ctx: any, e: any) => {
+    console.error(e);
+    if (e.response && (e.response.status === 401 || (e.response.status === 400 && e.response.data?.userMessage === 'Missing token'))) {
+        ctx.reply('Session expired or invalid. Please use /login to log in again.');
+    } else {
+        ctx.reply('An error occurred. Please try again later.');
+    }
+};
+
 bot.command('search', async (ctx) => {
     const query = ctx.message.text.split(' ').slice(1).join(' ');
     if (!query) {
@@ -76,8 +85,7 @@ bot.command('search', async (ctx) => {
 
         ctx.reply('Select a track to download:', Markup.inlineKeyboard(buttons));
     } catch (e) {
-        console.error(e);
-        ctx.reply('Search failed.');
+        handleError(ctx, e);
     }
 });
 
@@ -93,8 +101,7 @@ bot.action(/dl_(\d+)/, async (ctx) => {
         
         ctx.replyWithDocument({ source: filePath });
     } catch (e) {
-        console.error(e);
-        ctx.reply('Download failed.');
+        handleError(ctx, e);
     }
 });
 
@@ -113,8 +120,7 @@ bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\
             
             await ctx.replyWithDocument({ source: filePath });
         } catch (e) {
-            console.error(e);
-            ctx.reply('Download failed.');
+            handleError(ctx, e);
         }
     } else if (type === 'album') {
         try {
@@ -135,8 +141,7 @@ bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\
             }
             ctx.reply('Album download complete.');
         } catch (e) {
-            console.error(e);
-            ctx.reply('Album download failed.');
+            handleError(ctx, e);
         }
     }
 });

@@ -67,6 +67,13 @@ export class SettingsManager {
                 Object.assign(this.token, JSON.parse(decoded));
             } catch (e) {
                 console.error('Error loading token:', e);
+                // If token file is corrupt, delete it so we can start fresh
+                try {
+                    fs.unlinkSync(TOKEN_FILE);
+                    console.log('Corrupt token file deleted.');
+                } catch (delErr) {
+                    console.error('Failed to delete corrupt token file:', delErr);
+                }
             }
         }
     }

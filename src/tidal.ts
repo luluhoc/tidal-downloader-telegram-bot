@@ -25,6 +25,26 @@ export class TidalAPI {
             }
             return config;
         });
+
+        this.api.interceptors.response.use(
+            (response) => response,
+            async (error) => {
+                const originalRequest = error.config;
+                if (error.response?.status === 401 && !originalRequest._retry) {
+                    originalRequest._retry = true;
+                    console.log('Token expired, refreshing...');
+                    const refreshed = await this.refreshAccessToken();
+                    if (refreshed) {
+                        console.log('Token refreshed successfully');
+                        originalRequest.headers['Authorization'] = `Bearer ${settingsManager.token.accessToken}`;
+                        return this.api(originalRequest);
+                    } else {
+                        console.log('Token refresh failed');
+                    }
+                }
+                return Promise.reject(error);
+            }
+        );
     }
 
     public async getDeviceCode() {
