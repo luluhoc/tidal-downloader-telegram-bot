@@ -10,6 +10,21 @@ const bot = new Telegraf(process.env.BOT_TOKEN || '', {
     handlerTimeout: Infinity
 });
 
+// Middleware to check allowed users
+bot.use(async (ctx, next) => {
+    const allowedUsers = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',').map(id => parseInt(id.trim())) : [];
+    
+    if (allowedUsers.length > 0) {
+        const userId = ctx.from?.id;
+        if (!userId || !allowedUsers.includes(userId)) {
+            console.log(`Unauthorized access attempt from user ID: ${userId}`);
+            return; // Silently ignore unauthorized users
+        }
+    }
+    
+    await next();
+});
+
 bot.start((ctx) => {
     ctx.reply('Welcome to Tidal Media Downloader Bot!\n\nUse /login to log in to your Tidal account.\nUse /search <query> to search for music.');
 });

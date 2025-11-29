@@ -32,6 +32,8 @@ This is a Node.js TypeScript Telegram Bot for downloading music from Tidal. It a
 4.  Create a `.env` file in the root directory and add your Telegram Bot Token:
     ```env
     BOT_TOKEN=your_telegram_bot_token_here
+    # Optional: Comma-separated list of allowed Telegram User IDs
+    ALLOWED_USERS=123456789,987654321
     ```
 
 ## Usage
