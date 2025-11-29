@@ -6,7 +6,9 @@ import { downloadTrack } from './download';
 
 dotenv.config();
 
-const bot = new Telegraf(process.env.BOT_TOKEN || '');
+const bot = new Telegraf(process.env.BOT_TOKEN || '', {
+    handlerTimeout: Infinity
+});
 
 bot.start((ctx) => {
     ctx.reply('Welcome to Tidal Media Downloader Bot!\n\nUse /login to log in to your Tidal account.\nUse /search <query> to search for music.');

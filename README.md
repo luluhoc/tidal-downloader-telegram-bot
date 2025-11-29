@@ -1,55 +1,82 @@
 # Tidal Media Downloader - Telegram Bot
 
-This is a Node.js TypeScript port of the Tidal Media Downloader, designed to run as a Telegram Bot.
+This is a Node.js TypeScript Telegram Bot for downloading music from Tidal. It allows you to search for tracks or paste Tidal URLs directly to download high-quality music with metadata and cover art.
+
+## Features
+
+-   **Authentication**: Secure login via Tidal Device Authorization flow.
+-   **Search**: Search for tracks directly within Telegram.
+-   **URL Support**: Download tracks and full albums by pasting Tidal links (e.g., `https://tidal.com/browse/track/...`).
+-   **High Quality**: Downloads tracks and converts them to high-quality MP3 (320kbps).
+-   **Metadata**: Automatically tags files with:
+    -   Title, Artist(s), Album, Track Number, Disc Number, Release Date.
+    -   Embedded Album Cover Art.
+-   **Windows Support**: Includes one-click scripts for starting and updating the bot.
 
 ## Prerequisites
 
-- Node.js (v16 or higher)
-- npm or yarn
-- A Telegram Bot Token (from @BotFather)
+-   Node.js (v16 or higher)
+-   Yarn (recommended) or npm
+-   A Telegram Bot Token (get one from [@BotFather](https://t.me/BotFather))
+-   **FFmpeg**: Required for audio conversion and tagging.
+    -   The bot attempts to use a static binary, but having FFmpeg installed in your system PATH is recommended if issues arise.
 
 ## Installation
 
-1.  Navigate to the `ts-bot` directory:
+1.  Clone or download this repository.
+2.  Open a terminal in the project folder.
+3.  Install dependencies:
     ```bash
-    cd ts-bot
+    yarn install
     ```
-
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-
-3.  Create a `.env` file (or rename `.env.example` if available) and add your Bot Token:
-    ```
+4.  Create a `.env` file in the root directory and add your Telegram Bot Token:
+    ```env
     BOT_TOKEN=your_telegram_bot_token_here
     ```
 
 ## Usage
 
-1.  Build the project:
-    ```bash
-    npm run build
-    ```
+### Starting the Bot
 
+**On Windows:**
+-   Double-click `start_bot.bat` to start the bot.
+
+**Manual Start:**
+1.  Build the project (optional if running in dev mode):
+    ```bash
+    yarn build
+    ```
 2.  Start the bot:
     ```bash
-    npm start
+    yarn start
     ```
 
-3.  In Telegram, start a chat with your bot.
-4.  Use `/login` to authenticate with your Tidal account.
-5.  Use `/search <query>` to search for tracks.
-6.  Click on a track to download it.
+### Bot Commands
 
-## Features
+1.  **Start**: `/start` - Welcome message.
+2.  **Login**: `/login` - Authenticate with your Tidal account. Follow the link and enter the code provided.
+3.  **Search**: `/search <query>` - Search for tracks on Tidal. Click the buttons to download.
+4.  **Direct Download**: Simply paste a Tidal Track or Album URL into the chat.
+    -   **Track URL**: Downloads the single track.
+    -   **Album URL**: Downloads all tracks in the album sequentially.
 
--   **Authentication**: Supports Tidal Device Authorization flow.
--   **Search**: Search for tracks.
--   **Download**: Download tracks in FLAC/AAC quality (depending on account).
--   **Decryption**: Automatically decrypts tracks.
+### Updating
+
+**On Windows:**
+-   Double-click `update_bot.bat` to pull the latest changes from Git and update dependencies.
+
+**Manual Update:**
+```bash
+git pull
+yarn install
+```
 
 ## Notes
 
--   This is a simplified port focusing on the core downloading functionality.
--   Video downloading and advanced metadata tagging are not yet fully implemented.
+-   Downloads are saved in the `downloads/` folder, organized by `Artist/Album/`.
+-   The bot handles Dolby Atmos/EAC3 and AAC sources by transcoding them to MP3 320kbps for maximum compatibility.
+-   Large album downloads may take some time; the bot has an extended timeout to handle this.
+
+## Disclaimer
+
+This tool is for educational purposes only. Please respect copyright laws and Tidal's terms of service.
