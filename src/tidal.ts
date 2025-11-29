@@ -164,7 +164,7 @@ export class TidalAPI {
         let urls: string[] = [];
         let codec = '';
         let encryptionKey = '';
-        console.log(response.data)
+ 
         if (manifestMimeType.includes('vnd.tidal.bt')) {
             const manifest = JSON.parse(Buffer.from(response.data.manifest, 'base64').toString('utf-8'));
             url = manifest.urls[0];

@@ -13,7 +13,7 @@ const bot = new Telegraf(process.env.BOT_TOKEN || '', {
 // Middleware to check allowed users
 bot.use(async (ctx, next) => {
     const allowedUsers = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',').map(id => parseInt(id.trim())) : [];
-    
+    console.log('Allowed Users:', allowedUsers);
     if (allowedUsers.length > 0) {
         const userId = ctx.from?.id;
         if (!userId || !allowedUsers.includes(userId)) {
@@ -21,7 +21,7 @@ bot.use(async (ctx, next) => {
             return; // Silently ignore unauthorized users
         }
     }
-    
+    console.log(`Authorized access from user ID: ${ctx.from?.id}`);
     await next();
 });
 
