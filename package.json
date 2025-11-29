@@ -9,10 +9,11 @@
     "prod": "node dist/bot.js"
   },
   "keywords": [],
-  "git":"https://github.com/luluhoc/tidal-downloader-telegram-bot.git",
+  "git": "https://github.com/luluhoc/tidal-downloader-telegram-bot.git",
   "author": "Lucjan Grzesik",
   "license": "ISC",
   "dependencies": {
+    "archiver": "^7.0.1",
     "axios": "^1.6.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.3.1",
@@ -24,6 +25,7 @@
     "telegraf": "^4.15.0"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/crypto-js": "^4.2.1",
     "@types/fluent-ffmpeg": "^2.1.24",
     "@types/node": "^20.8.10",

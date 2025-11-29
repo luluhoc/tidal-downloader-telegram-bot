@@ -1,8 +1,11 @@
 import { Telegraf, Markup } from 'telegraf';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
+import * as fs from 'fs';
 import { tidalAPI } from './tidal';
 import { settingsManager } from './settings';
 import { downloadTrack } from './download';
+import { zipDirectory } from './utils';
 
 dotenv.config();
 
@@ -145,15 +148,34 @@ bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\
             
             ctx.reply(`Downloading album ${album.title} (${tracks.length} tracks)...`);
             
+            const downloadedFiles: string[] = [];
             for (const track of tracks) {
                 try {
                     const filePath = await downloadTrack(track, album);
-                    await ctx.replyWithDocument({ source: filePath });
+                    downloadedFiles.push(filePath);
+                    if (process.env.ZIP_ALBUMS !== 'true') {
+                        await ctx.replyWithDocument({ source: filePath });
+                    }
                 } catch (err) {
                     console.error(`Failed to download track ${track.title}`, err);
                     ctx.reply(`Failed to download ${track.title}`);
                 }
             }
+
+            if (process.env.ZIP_ALBUMS === 'true' && downloadedFiles.length > 0) {
+                const albumDir = path.dirname(downloadedFiles[0]);
+                const zipName = `${album.title.replace(/[\\/:*?"<>|$\.]/g, '_')}.zip`;
+                const zipPath = path.join(path.dirname(albumDir), zipName);
+
+                ctx.reply('Zipping album...');
+                await zipDirectory(albumDir, zipPath);
+
+                await ctx.replyWithDocument({ source: zipPath });
+                
+                // Cleanup zip file
+                fs.unlinkSync(zipPath);
+            }
+
             ctx.reply('Album download complete.');
         } catch (e) {
             handleError(ctx, e);

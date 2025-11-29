@@ -11,6 +11,7 @@ This is a Node.js TypeScript Telegram Bot for downloading music from Tidal. It a
 -   **Metadata**: Automatically tags files with:
     -   Title, Artist(s), Album, Track Number, Disc Number, Release Date.
     -   Embedded Album Cover Art.
+-   **Album Zipping**: Option to zip albums before sending them to Telegram (configurable via environment variable).
 -   **Windows Support**: Includes one-click scripts for starting and updating the bot.
 
 ## Prerequisites
@@ -34,6 +35,8 @@ This is a Node.js TypeScript Telegram Bot for downloading music from Tidal. It a
     BOT_TOKEN=your_telegram_bot_token_here
     # Optional: Comma-separated list of allowed Telegram User IDs
     ALLOWED_USERS=123456789,987654321
+    # Optional: Set to true to zip albums before sending (default: false)
+    ZIP_ALBUMS=false
     ```
 
 ## Usage
@@ -78,6 +81,7 @@ yarn install
 -   Downloads are saved in the `downloads/` folder, organized by `Artist/Album/`.
 -   The bot handles Dolby Atmos/EAC3 and AAC sources by transcoding them to MP3 320kbps for maximum compatibility.
 -   Large album downloads may take some time; the bot has an extended timeout to handle this.
+-   If `ZIP_ALBUMS=true` is set in `.env`, albums will be sent as a single ZIP file instead of individual tracks.
 
 ## Disclaimer
 
