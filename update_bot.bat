@@ -3,7 +3,8 @@ title Update Tidal Downloader Bot
 cd /d "%~dp0"
 
 echo Pulling latest changes from Git...
-git pull
+git fetch --all
+git reset --hard origin/main
 
 echo Installing dependencies...
 call yarn install
