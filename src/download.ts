@@ -17,16 +17,24 @@ export async function downloadTrack(track: Track, album: Album): Promise<string>
     try {
         const streamUrl = await tidalAPI.getStreamUrl(track.id);
         
-        const artistName = track.artist.name.replace(/[\\/:*?"<>|]/g, '_');
-        const albumTitle = album.title.replace(/[\\/:*?"<>|]/g, '_');
-        const trackTitle = track.title.replace(/[\\/:*?"<>|]/g, '_');
+        const artistName = track.artist.name.replace(/[\\/:*?"<>|$\.]/g, '_');
+        const albumTitle = album.title.replace(/[\\/:*?"<>|$\.]/g, '_');
+        const trackTitle = track.title.replace(/[\\/:*?"<>|$\.]/g, '_');
         
         const albumPath = path.resolve(settingsManager.settings.downloadPath, artistName, albumTitle);
         if (!fs.existsSync(albumPath)) {
             fs.mkdirSync(albumPath, { recursive: true });
         }
 
-        const filename = `${track.trackNumber} - ${trackTitle}.flac`; // Assuming FLAC for now
+        const ext = 'mp3';
+        /*
+        let ext = 'flac';
+        if (streamUrl.codec === 'eac3' || streamUrl.codec === 'mp4a.40.2' || streamUrl.codec === 'mp4a.40.5') {
+            ext = 'mp4';
+        }
+        */
+
+        const filename = `${track.trackNumber} - ${trackTitle}.${ext}`;
         const filePath = path.join(albumPath, filename);
         const tempPath = filePath + '.tmp';
 
@@ -91,7 +99,8 @@ export async function downloadTrack(track: Track, album: Album): Promise<string>
         }
 
         // Use system temp directory for the tagged file to avoid path issues
-        const taggedPath = path.join(os.tmpdir(), `temp_${Date.now()}_tagged.flac`);
+        // Normalize path to forward slashes for ffmpeg on Windows
+        const taggedPath = path.join(os.tmpdir(), `temp_${Date.now()}_tagged.${ext}`).replace(/\\/g, '/');
         
         try {
             // Verify input file exists
@@ -107,28 +116,45 @@ export async function downloadTrack(track: Track, album: Album): Promise<string>
                     .outputOptions(
                         '-map', '0', 
                         '-map', '1',
-                        '-c', 'copy',
+                        '-c:v', 'copy',
                         '-disposition:v:0', 'attached_pic',
-                        '-metadata:s:v', 'title="Album cover"',
-                        '-metadata:s:v', 'comment="Cover (front)"'
+                        '-c:a', 'libmp3lame',
+                        '-b:a', '320k',
+                        '-id3v2_version', '3'
+                    );
+                } else {
+                    command.outputOptions(
+                        '-c:a', 'libmp3lame',
+                        '-b:a', '320k',
+                        '-id3v2_version', '3'
                     );
                 }
 
-                const sanitize = (str: string) => str ? str.replace(/"/g, '\\"') : '';
+                // Simple sanitize: remove double quotes to avoid command line issues
+                const sanitize = (str: string) => {
+                    if (!str) return '';
+                    return str.replace(/"/g, '');
+                };
 
-                command.outputOptions(
-                        '-y',
-                        '-metadata', `title=${sanitize(track.title)}`,
-                        '-metadata', `artist=${sanitize(track.artist.name)}`,
-                        '-metadata', `album=${sanitize(album.title)}`,
-                        '-metadata', `track=${track.trackNumber}`,
-                        '-metadata', `disc=${track.volumeNumber}`,
-                        '-metadata', `date=${album.releaseDate}`
-                    )
+                command.outputOptions('-y');
+                command.outputOptions('-strict', '-2'); // Allow experimental codecs if needed
+
+                // Add metadata
+                command.outputOptions('-metadata', `title=${sanitize(track.title)}`);
+                command.outputOptions('-metadata', `artist=${sanitize(track.artist.name)}`);
+                command.outputOptions('-metadata', `album=${sanitize(album.title)}`);
+                command.outputOptions('-metadata', `track=${track.trackNumber}`);
+                command.outputOptions('-metadata', `disc=${track.volumeNumber}`);
+                command.outputOptions('-metadata', `date=${album.releaseDate}`);
+
+                command
                     .on('start', (cmd) => console.log('FFmpeg command:', cmd))
                     .save(taggedPath)
                     .on('end', () => resolve())
-                    .on('error', (err) => reject(err));
+                    .on('error', (err) => {
+                        console.error('FFmpeg error:', err);
+                        reject(err);
+                    });
             });
 
             // Replace original file with tagged file
@@ -137,13 +163,12 @@ export async function downloadTrack(track: Track, album: Album): Promise<string>
             }
             
             // Move from temp to final destination
-            // fs.renameSync might fail across partitions/drives, so use copy + unlink
             fs.copyFileSync(taggedPath, filePath);
             fs.unlinkSync(taggedPath);
             
         } catch (e) {
             console.error('Error tagging file:', e);
-            if (fs.existsSync(taggedPath)) {
+            if (taggedPath && fs.existsSync(taggedPath)) {
                 try { fs.unlinkSync(taggedPath); } catch (err) {}
             }
             // Keep the original file if tagging fails
