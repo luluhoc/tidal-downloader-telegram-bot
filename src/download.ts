@@ -16,7 +16,6 @@ import { settingsManager } from './settings';
 export async function downloadTrack(track: Track, album: Album): Promise<string> {
     try {
         const streamUrl = await tidalAPI.getStreamUrl(track.id);
-        
         const artistName = track.artist.name.replace(/[\\/:*?"<>|$\.]/g, '_');
         const albumTitle = album.title.replace(/[\\/:*?"<>|$\.]/g, '_');
         const trackTitle = track.title.replace(/[\\/:*?"<>|$\.]/g, '_');
@@ -139,9 +138,13 @@ export async function downloadTrack(track: Track, album: Album): Promise<string>
                 command.outputOptions('-y');
                 command.outputOptions('-strict', '-2'); // Allow experimental codecs if needed
 
+                const artists = track.artists && track.artists.length > 0 
+                    ? track.artists.map(a => a.name).join(', ') 
+                    : track.artist.name;
+
                 // Add metadata
                 command.outputOptions('-metadata', `title=${sanitize(track.title)}`);
-                command.outputOptions('-metadata', `artist=${sanitize(track.artist.name)}`);
+                command.outputOptions('-metadata', `artist=${sanitize(artists)}`);
                 command.outputOptions('-metadata', `album=${sanitize(album.title)}`);
                 command.outputOptions('-metadata', `track=${track.trackNumber}`);
                 command.outputOptions('-metadata', `disc=${track.volumeNumber}`);

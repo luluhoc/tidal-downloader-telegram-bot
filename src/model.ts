@@ -14,6 +14,7 @@ export interface Track {
     trackNumber: number;
     volumeNumber: number;
     artist: { id: number; name: string };
+    artists?: { id: number; name: string }[];
     album: { id: number; title: string; cover: string };
     url: string;
 }
