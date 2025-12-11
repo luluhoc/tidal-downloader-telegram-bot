@@ -28,6 +28,16 @@ bot.use(async (ctx, next) => {
     await next();
 });
 
+// Global error handler
+bot.catch((err: any, ctx: any) => {
+    console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
+    try {
+        ctx.reply("An unexpected error occurred.").catch((e: any) => console.error("Failed to reply to user", e));
+    } catch (e) {
+        console.error("Failed to reply to user", e);
+    }
+});
+
 bot.start((ctx) => {
     ctx.reply('Welcome to Tidal Media Downloader Bot!\n\nUse /login to log in to your Tidal account.\nUse /search <query> to search for music.');
 });
@@ -55,10 +65,14 @@ bot.command('login', async (ctx) => {
 
         // Poll for token
         const interval = setInterval(async () => {
-            const success = await tidalAPI.checkDeviceCode(dCode);
-            if (success) {
-                clearInterval(interval);
-                ctx.reply('Login successful!');
+            try {
+                const success = await tidalAPI.checkDeviceCode(dCode);
+                if (success) {
+                    clearInterval(interval);
+                    await ctx.reply('Login successful!').catch(e => console.error("Failed to reply", e));
+                }
+            } catch (e) {
+                console.error("Error in login polling:", e);
             }
         }, intervalTime * 1000);
 
@@ -73,12 +87,16 @@ bot.command('login', async (ctx) => {
     }
 });
 
-const handleError = (ctx: any, e: any) => {
+const handleError = async (ctx: any, e: any) => {
     console.error(e);
-    if (e.response && (e.response.status === 401 || (e.response.status === 400 && e.response.data?.userMessage === 'Missing token'))) {
-        ctx.reply('Session expired or invalid. Please use /login to log in again.');
-    } else {
-        ctx.reply('An error occurred. Please try again later.');
+    try {
+        if (e.response && (e.response.status === 401 || (e.response.status === 400 && e.response.data?.userMessage === 'Missing token'))) {
+            await ctx.reply('Session expired or invalid. Please use /login to log in again.');
+        } else {
+            await ctx.reply('An error occurred. Please try again later.');
+        }
+    } catch (err) {
+        console.error("Failed to send error message to user:", err);
     }
 };
 
@@ -103,7 +121,7 @@ bot.command('search', async (ctx) => {
 
         ctx.reply('Select a track to download:', Markup.inlineKeyboard(buttons));
     } catch (e) {
-        handleError(ctx, e);
+        await handleError(ctx, e);
     }
 });
 
@@ -119,7 +137,7 @@ bot.action(/dl_(\d+)/, async (ctx) => {
         
         ctx.replyWithDocument({ source: filePath });
     } catch (e) {
-        handleError(ctx, e);
+        await handleError(ctx, e);
     }
 });
 
@@ -138,7 +156,7 @@ bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\
             
             await ctx.replyWithDocument({ source: filePath });
         } catch (e) {
-            handleError(ctx, e);
+            await handleError(ctx, e);
         }
     } else if (type === 'album') {
         try {
@@ -158,7 +176,7 @@ bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\
                     }
                 } catch (err) {
                     console.error(`Failed to download track ${track.title}`, err);
-                    ctx.reply(`Failed to download ${track.title}`);
+                    await ctx.reply(`Failed to download ${track.title}`).catch(e => console.error("Failed to reply", e));
                 }
             }
 
@@ -178,7 +196,7 @@ bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\
 
             ctx.reply('Album download complete.');
         } catch (e) {
-            handleError(ctx, e);
+            await handleError(ctx, e);
         }
     }
 });
