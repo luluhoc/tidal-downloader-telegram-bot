@@ -10,196 +10,225 @@ import { zipDirectory } from './utils';
 dotenv.config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN || '', {
-    handlerTimeout: Infinity
+  handlerTimeout: Infinity,
 });
 
 // Middleware to check allowed users
 bot.use(async (ctx, next) => {
-    const allowedUsers = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',').map(id => parseInt(id.trim())) : [];
-    console.log('Allowed Users:', allowedUsers);
-    if (allowedUsers.length > 0) {
-        const userId = ctx.from?.id;
-        if (!userId || !allowedUsers.includes(userId)) {
-            console.log(`Unauthorized access attempt from user ID: ${userId}`);
-            return; // Silently ignore unauthorized users
-        }
+  const allowedUsers = process.env.ALLOWED_USERS
+    ? process.env.ALLOWED_USERS.split(',').map((id) => parseInt(id.trim()))
+    : [];
+  console.log('Allowed Users:', allowedUsers);
+  if (allowedUsers.length > 0) {
+    const userId = ctx.from?.id;
+    if (!userId || !allowedUsers.includes(userId)) {
+      console.log(`Unauthorized access attempt from user ID: ${userId}`);
+      return; // Silently ignore unauthorized users
     }
-    console.log(`Authorized access from user ID: ${ctx.from?.id}`);
-    await next();
+  }
+  console.log(`Authorized access from user ID: ${ctx.from?.id}`);
+  await next();
 });
 
 // Global error handler
 bot.catch((err: any, ctx: any) => {
-    console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
-    try {
-        ctx.reply("An unexpected error occurred.").catch((e: any) => console.error("Failed to reply to user", e));
-    } catch (e) {
-        console.error("Failed to reply to user", e);
-    }
+  console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
+  try {
+    ctx
+      .reply('An unexpected error occurred.')
+      .catch((e: any) => console.error('Failed to reply to user', e));
+  } catch (e) {
+    console.error('Failed to reply to user', e);
+  }
 });
 
 bot.start((ctx) => {
-    ctx.reply('Welcome to Tidal Media Downloader Bot!\n\nUse /login to log in to your Tidal account.\nUse /search <query> to search for music.');
+  ctx.reply(
+    'Welcome to Tidal Media Downloader Bot!\n\nUse /login to log in to your Tidal account.\nUse /search <query> to search for music.',
+  );
 });
 
 bot.command('login', async (ctx) => {
-    try {
-        const deviceCode = await tidalAPI.getDeviceCode();
-        console.log('Device Code Response:', deviceCode);
-        
-        const verificationUri = deviceCode.verificationUriComplete || deviceCode.verification_uri_complete;
-        const userCode = deviceCode.userCode || deviceCode.user_code;
-        const dCode = deviceCode.deviceCode || deviceCode.device_code;
-        const expiresIn = deviceCode.expiresIn || deviceCode.expires_in;
-        const intervalTime = deviceCode.interval || 5;
+  try {
+    const deviceCode = await tidalAPI.getDeviceCode();
 
-        if (!verificationUri) {
-            throw new Error('Could not get verification URI from Tidal');
-        }
-        
-        ctx.reply(`Please visit ${verificationUri} to authorize the bot. Code: ${userCode}`, 
-            Markup.inlineKeyboard([
-                Markup.button.url('Login', verificationUri)
-            ])
-        );
+    const verificationUri =
+      deviceCode.verificationUriComplete ||
+      deviceCode.verification_uri_complete;
+    const userCode = deviceCode.userCode || deviceCode.user_code;
+    const dCode = deviceCode.deviceCode || deviceCode.device_code;
+    const expiresIn = deviceCode.expiresIn || deviceCode.expires_in;
+    const intervalTime = deviceCode.interval || 5;
 
-        // Poll for token
-        const interval = setInterval(async () => {
-            try {
-                const success = await tidalAPI.checkDeviceCode(dCode);
-                if (success) {
-                    clearInterval(interval);
-                    await ctx.reply('Login successful!').catch(e => console.error("Failed to reply", e));
-                }
-            } catch (e) {
-                console.error("Error in login polling:", e);
-            }
-        }, intervalTime * 1000);
-
-        // Stop polling after some time (e.g. expires_in)
-        setTimeout(() => {
-            clearInterval(interval);
-        }, expiresIn * 1000);
-
-    } catch (e) {
-        console.error(e);
-        ctx.reply('Login failed. Please try again.');
+    if (!verificationUri) {
+      throw new Error('Could not get verification URI from Tidal');
     }
+
+    ctx.reply(
+      `Please visit ${verificationUri} to authorize the bot. Code: ${userCode}`,
+      Markup.inlineKeyboard([Markup.button.url('Login', verificationUri)]),
+    );
+
+    // Poll for token
+    const interval = setInterval(async () => {
+      try {
+        const success = await tidalAPI.checkDeviceCode(dCode);
+        if (success) {
+          clearInterval(interval);
+          await ctx
+            .reply('Login successful!')
+            .catch((e) => console.error('Failed to reply', e));
+        }
+      } catch (e) {
+        console.error('Error in login polling:', e);
+      }
+    }, intervalTime * 1000);
+
+    // Stop polling after some time (e.g. expires_in)
+    setTimeout(() => {
+      clearInterval(interval);
+    }, expiresIn * 1000);
+  } catch (e) {
+    console.error(e);
+    ctx.reply('Login failed. Please try again.');
+  }
 });
 
 const handleError = async (ctx: any, e: any) => {
-    console.error(e);
-    try {
-        if (e.response && (e.response.status === 401 || (e.response.status === 400 && e.response.data?.userMessage === 'Missing token'))) {
-            await ctx.reply('Session expired or invalid. Please use /login to log in again.');
-        } else {
-            await ctx.reply('An error occurred. Please try again later.');
-        }
-    } catch (err) {
-        console.error("Failed to send error message to user:", err);
+  console.error(e);
+  try {
+    if (
+      e.response &&
+      (e.response.status === 401 ||
+        (e.response.status === 400 &&
+          e.response.data?.userMessage === 'Missing token'))
+    ) {
+      await ctx.reply(
+        'Session expired or invalid. Please use /login to log in again.',
+      );
+    } else {
+      await ctx.reply('An error occurred. Please try again later.');
     }
+  } catch (err) {
+    console.error('Failed to send error message to user:', err);
+  }
 };
 
 bot.command('search', async (ctx) => {
-    const query = ctx.message.text.split(' ').slice(1).join(' ');
-    if (!query) {
-        return ctx.reply('Please provide a search query.');
+  const query = ctx.message.text.split(' ').slice(1).join(' ');
+  if (!query) {
+    return ctx.reply('Please provide a search query.');
+  }
+
+  try {
+    const results = await tidalAPI.search(query, 'TRACKS', 5);
+    const tracks = results.tracks.items;
+
+    if (tracks.length === 0) {
+      return ctx.reply('No results found.');
     }
 
-    try {
-        const results = await tidalAPI.search(query, 'TRACKS', 5);
-        const tracks = results.tracks.items;
+    const buttons = tracks.map((track: any) => {
+      const artistName =
+        track.artist?.name ||
+        (track.artists && track.artists[0]?.name) ||
+        'Unknown Artist';
+      return [
+        Markup.button.callback(
+          `${track.title} - ${artistName}`,
+          `dl_${track.id}`,
+        ),
+      ];
+    });
 
-        if (tracks.length === 0) {
-            return ctx.reply('No results found.');
-        }
-
-        const buttons = tracks.map((track: any) => {
-            const artistName = track.artist?.name || (track.artists && track.artists[0]?.name) || 'Unknown Artist';
-            return [Markup.button.callback(`${track.title} - ${artistName}`, `dl_${track.id}`)];
-        });
-
-        ctx.reply('Select a track to download:', Markup.inlineKeyboard(buttons));
-    } catch (e) {
-        await handleError(ctx, e);
-    }
+    ctx.reply('Select a track to download:', Markup.inlineKeyboard(buttons));
+  } catch (e) {
+    await handleError(ctx, e);
+  }
 });
 
 bot.action(/dl_(\d+)/, async (ctx) => {
-    const trackId = parseInt(ctx.match[1]);
-    try {
-        ctx.reply('Fetching track info...');
-        const track = await tidalAPI.getTrack(trackId);
-        const album = await tidalAPI.getAlbum(track.album.id);
-        
-        ctx.reply(`Downloading ${track.title}...`);
-        const filePath = await downloadTrack(track, album);
-        
-        ctx.replyWithDocument({ source: filePath });
-    } catch (e) {
-        await handleError(ctx, e);
-    }
+  const trackId = parseInt(ctx.match[1]);
+  try {
+    ctx.reply('Fetching track info...');
+    const track = await tidalAPI.getTrack(trackId);
+    const album = await tidalAPI.getAlbum(track.album.id);
+
+    ctx.reply(`Downloading ${track.title}...`);
+    const filePath = await downloadTrack(track, album);
+
+    ctx.replyWithDocument({ source: filePath });
+  } catch (e) {
+    await handleError(ctx, e);
+  }
 });
 
-bot.hears(/https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\/(\d+)/, async (ctx) => {
+bot.hears(
+  /https?:\/\/(?:listen\.|www\.)?tidal\.com\/(?:browse\/)?(track|album)\/(\d+)/,
+  async (ctx) => {
     const type = ctx.match[1];
     const id = parseInt(ctx.match[2]);
 
     if (type === 'track') {
-        try {
-            ctx.reply('Fetching track info...');
-            const track = await tidalAPI.getTrack(id);
-            const album = await tidalAPI.getAlbum(track.album.id);
-            
-            ctx.reply(`Downloading ${track.title}...`);
-            const filePath = await downloadTrack(track, album);
-            
-            await ctx.replyWithDocument({ source: filePath });
-        } catch (e) {
-            await handleError(ctx, e);
-        }
+      try {
+        ctx.reply('Fetching track info...');
+        const track = await tidalAPI.getTrack(id);
+        const album = await tidalAPI.getAlbum(track.album.id);
+
+        ctx.reply(`Downloading ${track.title}...`);
+        const filePath = await downloadTrack(track, album);
+
+        await ctx.replyWithDocument({ source: filePath });
+      } catch (e) {
+        await handleError(ctx, e);
+      }
     } else if (type === 'album') {
-        try {
-            ctx.reply('Fetching album info...');
-            const album = await tidalAPI.getAlbum(id);
-            const tracks = await tidalAPI.getAlbumTracks(id);
-            
-            ctx.reply(`Downloading album ${album.title} (${tracks.length} tracks)...`);
-            
-            const downloadedFiles: string[] = [];
-            for (const track of tracks) {
-                try {
-                    const filePath = await downloadTrack(track, album);
-                    downloadedFiles.push(filePath);
-                    if (process.env.ZIP_ALBUMS !== 'true') {
-                        await ctx.replyWithDocument({ source: filePath });
-                    }
-                } catch (err) {
-                    console.error(`Failed to download track ${track.title}`, err);
-                    await ctx.reply(`Failed to download ${track.title}`).catch(e => console.error("Failed to reply", e));
-                }
+      try {
+        ctx.reply('Fetching album info...');
+        const album = await tidalAPI.getAlbum(id);
+        const tracks = await tidalAPI.getAlbumTracks(id);
+
+        ctx.reply(
+          `Downloading album ${album.title} (${tracks.length} tracks)...`,
+        );
+
+        const downloadedFiles: string[] = [];
+        for (const track of tracks) {
+          try {
+            const filePath = await downloadTrack(track, album);
+            downloadedFiles.push(filePath);
+            if (process.env.ZIP_ALBUMS !== 'true') {
+              await ctx.replyWithDocument({ source: filePath });
             }
-
-            if (process.env.ZIP_ALBUMS === 'true' && downloadedFiles.length > 0) {
-                const albumDir = path.dirname(downloadedFiles[0]);
-                const zipName = `${album.title.replace(/[\\/:*?"<>|$\.]/g, '_')}.zip`;
-                const zipPath = path.join(path.dirname(albumDir), zipName);
-
-                ctx.reply('Zipping album...');
-                await zipDirectory(albumDir, zipPath);
-
-                await ctx.replyWithDocument({ source: zipPath });
-                
-                // Cleanup zip file
-                fs.unlinkSync(zipPath);
-            }
-
-            ctx.reply('Album download complete.');
-        } catch (e) {
-            await handleError(ctx, e);
+          } catch (err) {
+            console.error(`Failed to download track ${track.title}`, err);
+            await ctx
+              .reply(`Failed to download ${track.title}`)
+              .catch((e) => console.error('Failed to reply', e));
+          }
         }
+
+        if (process.env.ZIP_ALBUMS === 'true' && downloadedFiles.length > 0) {
+          const albumDir = path.dirname(downloadedFiles[0]);
+          const zipName = `${album.title.replace(/[\\/:*?"<>|$\.]/g, '_')}.zip`;
+          const zipPath = path.join(path.dirname(albumDir), zipName);
+
+          ctx.reply('Zipping album...');
+          await zipDirectory(albumDir, zipPath);
+
+          await ctx.replyWithDocument({ source: zipPath });
+
+          // Cleanup zip file
+          fs.unlinkSync(zipPath);
+        }
+
+        ctx.reply('Album download complete.');
+      } catch (e) {
+        await handleError(ctx, e);
+      }
     }
-});
+  },
+);
 
 bot.launch();
 
